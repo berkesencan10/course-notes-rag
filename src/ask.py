@@ -1,5 +1,6 @@
+"""Command line: answer one question with classic RAG and list the pages used."""
 import sys
-from rag import answer
+from src.rag import answer
 
 text, pages = answer(" ".join(sys.argv[1:]))
 print(text)

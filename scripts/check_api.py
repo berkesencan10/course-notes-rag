@@ -1,3 +1,4 @@
+"""Check that the Anthropic API key works by sending one short message."""
 import anthropic
 
 client = anthropic.Anthropic()

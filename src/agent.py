@@ -1,7 +1,8 @@
+"""Tool-calling agent: Claude searches the notes itself and returns structured JSON."""
 import sys
 import json
 import anthropic
-from rag import search, get_page, MODEL, USAGE
+from src.rag import search, get_page, MODEL, USAGE
 
 SYSTEM = """You answer questions about university course notes (lecture slides).
 Use search_notes to find relevant pages. Slide titles often appear alone, so use get_page

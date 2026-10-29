@@ -1,3 +1,4 @@
+"""Read every PDF in data/notes page by page and save the text to data/pages.json."""
 import json
 from pathlib import Path
 import pymupdf

@@ -1,9 +1,9 @@
 .venv/
 __pycache__/
+*.pyc
 .env
+.DS_Store
 data/
 chroma_db/
-.DS_Store
-eval_results.json
 eval_results.json
 eval_results_*.json

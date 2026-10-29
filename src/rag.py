@@ -1,3 +1,4 @@
+"""Classic RAG: vector search, near-duplicate removal, neighbouring pages, one Claude call."""
 import json
 import os
 import re

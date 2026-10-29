@@ -1,48 +1,88 @@
 # Course Notes Q&A (RAG with citations)
 
-Ask questions about university lecture slides and get answers that cite the **file and page** they came from. If the notes do not contain the answer, the system says so instead of guessing.
+Ask questions about your lecture PDFs and get answers that cite the **file and page** they came from. If the notes do not cover the question, the system says so instead of guessing. Built for students who want to study from their own slides and check every answer against the source.
 
-A small end-to-end LLM project: PDF extraction, retrieval with a vector store, answer generation with the Claude API, a tool-calling agent with structured JSON output, and an evaluation harness. Built with AI assistance (Claude); each design decision below was tested with the eval harness.
+A small end-to-end LLM project: PDF extraction, retrieval with a local vector store, answer generation with the Claude API, a tool-calling agent with structured JSON output, and an evaluation harness. Built with AI assistance (Claude); each design decision below was tested with the eval harness.
 
-## Example
+## Example output
 
-````
-$ python agent.py "Is depth-first search complete?"
-````
+A question the notes can answer:
 
-````json
+```
+$ python -m src.agent "Is depth-first search complete?"
+```
+
+```json
 {
   "answer": "Not in general. DFS completeness depends on the state space. Yes, for finite, acyclic state spaces. Yes, for finite, cyclic state spaces if it is implemented as graph search (it checks for repeated states). No, for infinite state spaces.",
   "confidence": "high",
   "sources": [
-    {
-      "file": "02_search.pdf",
-      "page": 74
-    },
-    {
-      "file": "02_search.pdf",
-      "page": 72
-    }
+    {"file": "02_search.pdf", "page": 74},
+    {"file": "02_search.pdf", "page": 72}
   ],
   "unverified_sources_removed": 0
 }
-````
-(JSON part of the output; the command also prints the tool calls it made)
+```
 
-For an out-of-scope question ("What is the capital of France?") the agent returns `"confidence": "not_found"` and an empty `sources` list.
+A question the notes cannot answer:
+
+```
+$ python -m src.agent "What is the capital of France?"
+```
+
+```json
+{
+  "answer": "The notes don't say what the capital of France is. They only cover AI topics such as search, agents, games and machine learning.",
+  "sources": [],
+  "confidence": "not_found",
+  "unverified_sources_removed": 0
+}
+```
+
+(Real outputs from my test course. The wording differs from run to run; the command also prints the tool calls the agent made.)
+
+## Architecture
+
+```
+INDEXING (once)
+  PDFs -> extract -> one record per page (file, page, text) -> index -> Chroma
+
+CLASSIC RAG  (src/rag.py)                 AGENT  (src/agent.py)
+
+  question                                  question
+     |                                         |
+  vector search, top 30                        v
+     |                                  +--> Claude --> search_notes
+  drop near-duplicate pages             |      |   \--> get_page
+     |                                  +------+
+  add neighbouring pages                       |
+     |                                         v
+  one Claude call                        submit_answer (JSON)
+     |                                         |
+     v                                  drop sources it never saw
+  answer + [file, page]                        |
+                                               v
+                                        answer, sources, confidence
+```
+
+Project layout:
+
+```
+src/       pipeline code: extract, index, search, rag, ask, agent
+eval/      eval.py and eval_questions.json
+scripts/   check_api.py (checks that your API key works)
+```
 
 ## How it works
 
-1. `extract.py` reads every PDF page with PyMuPDF and keeps the file name and page number.
-2. `index.py` stores one chunk per page (split at 1500 characters) in a local Chroma database. Embeddings use Chroma's default local model, so no extra API key is needed.
+1. `src/extract.py` reads every PDF page with PyMuPDF and keeps the file name and page number.
+2. `src/index.py` stores one chunk per page (split at 1500 characters) in a local Chroma database. Embeddings use Chroma's default local model, so no extra API key is needed.
 3. Two ways to answer a question:
-   - **Classic RAG** (`rag.py`, `ask.py`): vector search, remove near-duplicate pages, add neighbouring pages, then one Claude call with a prompt that says "answer only from the excerpts and cite them".
-   - **Agent** (`agent.py`): Claude decides what to do with three tools: `search_notes`, `get_page` and `submit_answer`. The final answer is structured JSON (`answer`, `sources`, `confidence`). Cited pages that the agent never saw (neither in a search result nor via `get_page`) are removed in code; this never triggered in my tests.
-4. `eval.py` runs a question set against either approach and reports score and token usage.
+   - **Classic RAG** (`src/rag.py`, `src/ask.py`): vector search, remove near-duplicate pages, add neighbouring pages, then one Claude call with a prompt that says "answer only from the excerpts and cite them".
+   - **Agent** (`src/agent.py`): Claude decides what to do with three tools: `search_notes`, `get_page` and `submit_answer`. The final answer is structured JSON (`answer`, `sources`, `confidence`). Cited pages that the agent never saw (neither in a search result nor via `get_page`) are removed in code; this never triggered in my tests.
+4. `eval/eval.py` runs a question set against either approach and reports score and token usage.
 
-## Evaluation
-
-23 questions in `eval_questions.json`: 16 about course topics taken from past exams, 5 about specific details of the lecture slides (written after I had already seen the system's earlier answers, so they are biased towards facts it can find) and 2 out-of-scope questions that must be answered with "not found". Each answer is checked by keyword matching. Each question can be repeated to account for run-to-run variation.
+## Why two approaches?
 
 | | Classic RAG | Agent |
 |---|---|---|
@@ -51,7 +91,25 @@ For an out-of-scope question ("What is the capital of France?") the agent return
 | Output tokens per question | 303 | 433 |
 | Tool calls per question | none | 2.1 |
 
-The two approaches are equally accurate on this test set. The agent costs about 1.5x more tokens and in return it validates its sources, returns structured JSON and decides itself which pages to read.
+On this test set the two are equally accurate. The agent uses about 1.5x the tokens: the input ratio is 1.58 and the output ratio is 1.43, so on the same model it costs roughly 1.4x to 1.6x, whatever the per-token prices are.
+
+My take (a judgment, not something this test measured): classic RAG is the better default. It is one call, cheaper and easier to debug, but its recall depends on retrieval settings (with 1 neighbouring page it scored 44/46, with 2 it scored 46/46). The agent is worth its cost when you need structured output or source validation downstream, or when an answer is spread over several places, because it decides what to read. It also has more moving parts: a bad tool call can change the answer.
+
+## Evaluation
+
+23 questions in `eval/eval_questions.json`: 16 about course topics taken from past exams, 5 about specific details of the lecture slides (written after I had already seen the system's earlier answers, so they are biased towards facts it can find) and 2 out-of-scope questions that must be answered with "not found". Each answer is checked by keyword matching. Each question can be repeated to account for run-to-run variation.
+
+### Adding your own questions
+
+`eval/eval_questions.json` is a list of objects:
+
+```json
+{"q": "What is a Horn clause?", "expect": "answer", "must": ["positive|implication|conjunction"]}
+{"q": "What is the capital of France?", "expect": "not_found", "must": []}
+```
+
+- `expect: "answer"`: the answer must not be a refusal, and every string in `must` must match. Inside one string, alternatives are separated by `|` and one of them is enough. Matching is a case-insensitive substring search.
+- `expect: "not_found"`: the answer must say it could not find this in the notes (checked in the first 250 characters).
 
 ## What I learned
 
@@ -69,22 +127,36 @@ The two approaches are equally accurate on this test set. The agent costs about 
 - Diagram slides (for example the alpha-beta worked example) extract as garbled text, so step-by-step explanations of figures are unreliable.
 - Tested on one course (14 PDFs, English).
 
+## Next steps
+
+- OCR for image-only slides.
+- A larger and harder test set, with questions written before looking at the system's answers.
+- LLM-as-judge scoring next to keyword matching, checked against manual labels.
+- A FastAPI service and a Docker image.
+
 ## Setup
 
-````
+Run everything from the repository root.
+
+```
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 export ANTHROPIC_API_KEY="your-key"
+python scripts/check_api.py                   # checks that the key works
 
-mkdir -p data/notes        # put your lecture PDFs here
-python extract.py          # writes data/pages.json
-python index.py            # builds the Chroma index
+mkdir -p data/notes                           # put your lecture PDFs here
+python -m src.extract                         # writes data/pages.json
+python -m src.index                           # builds the Chroma index
 
-python ask.py "Explain alpha-beta pruning"        # classic RAG
-python agent.py "Is depth-first search complete?" # tool-calling agent
+python -m src.ask "Explain alpha-beta pruning"          # classic RAG
+python -m src.agent "Is depth-first search complete?"   # tool-calling agent
 
-python eval.py 3           # classic, each question 3 times
-python eval.py 3 agent     # agent
-````
+python -m eval.eval 3                         # classic, each question 3 times
+python -m eval.eval 3 agent                   # agent
+```
 
-The course PDFs are not included in this repository. `eval_questions.json` was written for an Artificial Intelligence course; replace it with questions for your own notes.
+The course PDFs are not included in this repository. `eval/eval_questions.json` was written for an Artificial Intelligence course; replace it with questions for your own notes.
+
+## License
+
+MIT, see [LICENSE](LICENSE).

@@ -1,9 +1,11 @@
+"""Run eval_questions.json against classic RAG or the agent; report score and tokens."""
 import json
 import sys
+from pathlib import Path
 MODE = sys.argv[2] if len(sys.argv) > 2 else "classic"
 STATS = []
 if MODE == "agent":
-    from agent import ask_agent
+    from src.agent import ask_agent
 
     def answer(q):
         r, calls = ask_agent(q)
@@ -13,7 +15,7 @@ if MODE == "agent":
             text = "I could not find this in the notes. " + text
         return text, [(s["file"], s["page"]) for s in r["sources"]]
 else:
-    from rag import answer
+    from src.rag import answer
 
 RUNS = int(sys.argv[1]) if len(sys.argv) > 1 else 1
 
@@ -32,7 +34,7 @@ def has_all(text, groups):
     return all(any(alt.strip() in low for alt in g.split("|")) for g in groups)
 
 
-questions = json.load(open("eval_questions.json", encoding="utf-8"))
+questions = json.load(open(Path(__file__).parent / "eval_questions.json", encoding="utf-8"))
 results, total = [], 0
 
 for i, item in enumerate(questions, start=1):
@@ -63,5 +65,5 @@ if STATS:
     print(f"Average tool calls: {sum(c for c, _ in STATS) / len(STATS):.1f}")
     print(f"Unverified sources removed: {sum(r for _, r in STATS)}")
 
-from rag import USAGE
+from src.rag import USAGE
 print(f"Tokens per question: input {USAGE['in'] / n:.0f}, output {USAGE['out'] / n:.0f}")

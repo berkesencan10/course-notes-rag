@@ -1,3 +1,4 @@
+"""Split the extracted pages into chunks and store them in a local Chroma index."""
 import json
 import chromadb
 

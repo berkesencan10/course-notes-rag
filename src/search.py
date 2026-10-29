@@ -1,3 +1,4 @@
+"""Print the three most similar pages for a query (quick check of the vector search)."""
 import sys
 import chromadb
 
