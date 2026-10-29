@@ -59,3 +59,21 @@ Question: {question}"""
     )
     text = "".join(b.text for b in msg.content if b.type == "text")
     return text, wanted
+
+
+def search(query, n=6):
+    res = _col.query(query_texts=[query], n_results=N_CANDIDATES)
+    picked, picked_words = [], []
+    for doc, meta in zip(res["documents"][0], res["metadatas"][0]):
+        w = _words(doc)
+        if any(len(w & o) / max(len(w | o), 1) > 0.7 for o in picked_words):
+            continue
+        picked.append((meta["file"], meta["page"]))
+        picked_words.append(w)
+        if len(picked) == n:
+            break
+    return [(f, p, _page_text[(f, p)]) for f, p in picked]
+
+
+def get_page(file, page):
+    return _page_text.get((file, page))

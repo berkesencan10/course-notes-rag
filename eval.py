@@ -1,6 +1,19 @@
 import json
 import sys
-from rag import answer
+MODE = sys.argv[2] if len(sys.argv) > 2 else "classic"
+STATS = []
+if MODE == "agent":
+    from agent import ask_agent
+
+    def answer(q):
+        r, calls = ask_agent(q)
+        STATS.append((len(calls), r.get("unverified_sources_removed", 0)))
+        text = r["answer"]
+        if r["confidence"] == "not_found":
+            text = "I could not find this in the notes. " + text
+        return text, [(s["file"], s["page"]) for s in r["sources"]]
+else:
+    from rag import answer
 
 RUNS = int(sys.argv[1]) if len(sys.argv) > 1 else 1
 
@@ -42,7 +55,10 @@ for i, item in enumerate(questions, start=1):
                     "answer": shown_text,
                     "pages": [f"{f} p{p}" for f, p in pages]})
 
-json.dump(results, open("eval_results.json", "w", encoding="utf-8"),
+json.dump(results, open(f"eval_results_{MODE}.json", "w", encoding="utf-8"),
           ensure_ascii=False, indent=2)
 n = len(questions) * RUNS
 print(f"\nSkor: {total}/{n} ({100 * total / n:.0f}%)")
+if STATS:
+    print(f"Ortalama araç çağrısı: {sum(c for c, _ in STATS) / len(STATS):.1f}")
+    print(f"Silinen doğrulanmamış kaynak: {sum(r for _, r in STATS)}")

@@ -6,3 +6,4 @@ chroma_db/
 .DS_Store
 eval_results.json
 eval_results.json
+eval_results_*.json

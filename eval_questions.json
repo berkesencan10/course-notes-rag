@@ -16,5 +16,10 @@
   {"q": "What is a sound inference algorithm?", "expect": "answer", "must": ["entail|consequence|logical|true"]},
   {"q": "What is the evaluation function of A* search?", "expect": "answer", "must": ["g(n)|path cost|path-cost", "h(n)|heuristic"]},
   {"q": "What is the capital of France?", "expect": "not_found", "must": []},
-  {"q": "Who won the 2018 FIFA World Cup?", "expect": "not_found", "must": []}
+  {"q": "Who won the 2018 FIFA World Cup?", "expect": "not_found", "must": []},
+  {"q": "What is the time complexity of breadth-first search?", "expect": "answer", "must": ["b^d"]},
+  {"q": "Under what condition is breadth-first search cost-optimal?", "expect": "answer", "must": ["same|equal|identical|uniform"]},
+  {"q": "What is the space complexity of alpha-beta search?", "expect": "answer", "must": ["o(m)|o(bm)"]},
+  {"q": "What does heuristic alpha-beta search use when the cutoff depth is reached?", "expect": "answer", "must": ["evaluation"]},
+  {"q": "In the BFS pseudocode, what happens to a child whose state is already in the reached set?", "expect": "answer", "must": ["reached", "not|skip|ignor|only"]}
 ]
