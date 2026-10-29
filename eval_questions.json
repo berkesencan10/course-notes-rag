@@ -1,0 +1,20 @@
+[
+  {"q": "What does steepest-ascent hill climbing do at each step?", "expect": "answer", "must": ["best|highest|steepest", "neighbo|successor"]},
+  {"q": "What is the difference between classification and regression problems?", "expect": "answer", "must": ["categor|class|discrete", "continuous|numeric|real"]},
+  {"q": "When is a heuristic function admissible?", "expect": "answer", "must": ["overestimat"]},
+  {"q": "What is the difference between BFS and DFS?", "expect": "answer", "must": ["fifo", "lifo"]},
+  {"q": "Is depth-first search complete?", "expect": "answer", "must": ["finite|infinite|cycl"]},
+  {"q": "In alpha-beta search, when does the max player stop examining the remaining actions?", "expect": "answer", "must": ["beta|β", "return|stop|prun|cutoff"]},
+  {"q": "What is minimax used for?", "expect": "answer", "must": ["game|adversar|two-player|opponent", "optimal|best"]},
+  {"q": "What is the resolution algorithm used for?", "expect": "answer", "must": ["satisf|entail|empty clause"]},
+  {"q": "What does deriving the empty clause by resolution mean?", "expect": "answer", "must": ["unsatisf|contradict"]},
+  {"q": "What is a Horn clause?", "expect": "answer", "must": ["positive|implication|conjunction"]},
+  {"q": "What is the difference between the open-world and the closed-world assumption?", "expect": "answer", "must": ["open", "closed", "unknown|false|not"]},
+  {"q": "What are the components of a constraint satisfaction problem?", "expect": "answer", "must": ["variable", "domain", "constraint"]},
+  {"q": "What is the ReLU activation function?", "expect": "answer", "must": ["max|zero|0"]},
+  {"q": "What does a Bayesian network represent?", "expect": "answer", "must": ["probab", "graph|dependenc|conditional"]},
+  {"q": "What is a sound inference algorithm?", "expect": "answer", "must": ["entail|consequence|logical|true"]},
+  {"q": "What is the evaluation function of A* search?", "expect": "answer", "must": ["g(n)|path cost", "h(n)|heuristic"]},
+  {"q": "What is the capital of France?", "expect": "not_found", "must": []},
+  {"q": "Who won the 2018 FIFA World Cup?", "expect": "not_found", "must": []}
+]
