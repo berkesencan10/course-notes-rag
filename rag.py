@@ -1,10 +1,11 @@
 import json
+import os
 import re
 import anthropic
 import chromadb
 
 MODEL = "claude-sonnet-5-5"
-NEIGHBORS = 1      # bulunan sayfanın kaç önceki/sonraki sayfası da eklensin
+NEIGHBORS = int(os.environ.get("RAG_NEIGHBORS", "1"))  # neighbouring pages added on each side
 N_CANDIDATES = 30  # aramadan kaç aday çekilsin
 N_PICKED = 6       # benzerleri eledikten sonra kaç sayfa kalsın
 
@@ -12,6 +13,7 @@ _pages = json.load(open("data/pages.json", encoding="utf-8"))
 _page_text = {(p["file"], p["page"]): p["text"] for p in _pages}
 _col = chromadb.PersistentClient(path="chroma_db").get_collection("notes")
 _client = anthropic.Anthropic()
+USAGE = {"in": 0, "out": 0}
 
 
 def _words(text):
@@ -57,6 +59,8 @@ Question: {question}"""
         max_tokens=3000,
         messages=[{"role": "user", "content": prompt}],
     )
+    USAGE["in"] += msg.usage.input_tokens
+    USAGE["out"] += msg.usage.output_tokens
     text = "".join(b.text for b in msg.content if b.type == "text")
     return text, wanted
 

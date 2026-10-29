@@ -1,7 +1,7 @@
 import sys
 import json
 import anthropic
-from rag import search, get_page, MODEL
+from rag import search, get_page, MODEL, USAGE
 
 SYSTEM = """You answer questions about university course notes (lecture slides).
 Use search_notes to find relevant pages. Slide titles often appear alone, so use get_page
@@ -78,6 +78,8 @@ def ask_agent(question, max_steps=8):
             model=MODEL, max_tokens=4000, system=SYSTEM,
             tools=TOOLS, messages=messages,
         )
+        USAGE["in"] += resp.usage.input_tokens
+        USAGE["out"] += resp.usage.output_tokens
         messages.append({"role": "assistant", "content": resp.content})
         tool_uses = [b for b in resp.content if b.type == "tool_use"]
         if not tool_uses:

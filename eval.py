@@ -62,3 +62,6 @@ print(f"\nSkor: {total}/{n} ({100 * total / n:.0f}%)")
 if STATS:
     print(f"Ortalama araç çağrısı: {sum(c for c, _ in STATS) / len(STATS):.1f}")
     print(f"Silinen doğrulanmamış kaynak: {sum(r for _, r in STATS)}")
+
+from rag import USAGE
+print(f"Tokens per question: input {USAGE['in'] / n:.0f}, output {USAGE['out'] / n:.0f}")
