@@ -37,16 +37,16 @@ For an out-of-scope question ("What is the capital of France?") the agent return
 2. `index.py` stores one chunk per page (split at 1500 characters) in a local Chroma database. Embeddings use Chroma's default local model, so no extra API key is needed.
 3. Two ways to answer a question:
    - **Classic RAG** (`rag.py`, `ask.py`): vector search, remove near-duplicate pages, add neighbouring pages, then one Claude call with a prompt that says "answer only from the excerpts and cite them".
-   - **Agent** (`agent.py`): Claude decides what to do with three tools: `search_notes`, `get_page` and `submit_answer`. The final answer is structured JSON (`answer`, `sources`, `confidence`). Cited pages that the agent never actually read are removed in code.
+   - **Agent** (`agent.py`): Claude decides what to do with three tools: `search_notes`, `get_page` and `submit_answer`. The final answer is structured JSON (`answer`, `sources`, `confidence`). Cited pages that the agent never saw (neither in a search result nor via `get_page`) are removed in code; this never triggered in my tests.
 4. `eval.py` runs a question set against either approach and reports score and token usage.
 
 ## Evaluation
 
-23 questions in `eval_questions.json`: 21 about the course content (based on topics from past exams) and 2 out-of-scope questions that must be answered with "not found". Each answer is checked by keyword matching. Each question can be repeated to account for run-to-run variation.
+23 questions in `eval_questions.json`: 16 about course topics taken from past exams, 5 about specific details of the lecture slides (written after I had already seen the system's earlier answers, so they are biased towards facts it can find) and 2 out-of-scope questions that must be answered with "not found". Each answer is checked by keyword matching. Each question can be repeated to account for run-to-run variation.
 
 | | Classic RAG | Agent |
 |---|---|---|
-| Score (23 questions) | 23/23 | 23/23 |
+| Score (23 questions, one run) | 23/23 | 23/23 |
 | Input tokens per question | 2379 | 3753 |
 | Output tokens per question | 303 | 433 |
 | Tool calls per question | none | 2.1 |
@@ -56,7 +56,7 @@ The two approaches are equally accurate on this test set. The agent costs about 
 ## What I learned
 
 - **Slide animation frames flood the search.** One slide deck contains 21 near-identical "Alpha-beta pruning" frames that filled the top results and pushed out the page with the actual algorithm. Removing near-duplicate pages fixed it.
-- **Title-only slides.** A slide with only a title is not an answer. Adding neighbouring pages (or letting the agent call `get_page`) fixed several "not found" answers. With 1 neighbouring page the classic version scored 44/46 (96%) because one fact sat two pages away; with 2 it scored 23/23.
+- **Title-only slides.** A slide with only a title is not an answer. Adding neighbouring pages (or letting the agent call `get_page`) fixed several "not found" answers. With 1 neighbouring page the classic version scored 44/46 (96%) because one fact sat two pages away; with 2 it scored 46/46 over two runs.
 - **One eval run is not a score.** The same question passed in one run and failed in the next because the model words answers differently. Repeating each question and averaging is more honest.
 - **Check the test, not just the system.** The first baseline was 17/18, but the failure was a keyword check that was too strict (the answer was correct). Two such checks were loosened after reading the answers.
 
