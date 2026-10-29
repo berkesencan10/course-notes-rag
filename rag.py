@@ -5,7 +5,7 @@ import anthropic
 import chromadb
 
 MODEL = "claude-sonnet-5-5"
-NEIGHBORS = int(os.environ.get("RAG_NEIGHBORS", "1"))  # neighbouring pages added on each side
+NEIGHBORS = int(os.environ.get("RAG_NEIGHBORS", "2"))  # neighbouring pages added on each side
 N_CANDIDATES = 30  # candidates fetched from the vector search
 N_PICKED = 6       # pages kept after removing near-duplicates
 

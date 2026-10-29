@@ -12,15 +12,22 @@ $ python agent.py "Is depth-first search complete?"
 
 ````json
 {
-  "answer": "Not in general. Yes for finite acyclic state spaces; yes for finite cyclic spaces if implemented as graph search; no for infinite state spaces.",
+  "answer": "Not in general. DFS completeness depends on the state space. Yes, for finite, acyclic state spaces. Yes, for finite, cyclic state spaces if it is implemented as graph search (it checks for repeated states). No, for infinite state spaces.",
   "confidence": "high",
   "sources": [
-    {"file": "02_search.pdf", "page": 74},
-    {"file": "02_search.pdf", "page": 72}
-  ]
+    {
+      "file": "02_search.pdf",
+      "page": 74
+    },
+    {
+      "file": "02_search.pdf",
+      "page": 72
+    }
+  ],
+  "unverified_sources_removed": 0
 }
 ````
-(answer abridged)
+(JSON part of the output; the command also prints the tool calls it made)
 
 For an out-of-scope question ("What is the capital of France?") the agent returns `"confidence": "not_found"` and an empty `sources` list.
 
