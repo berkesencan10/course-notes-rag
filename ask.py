@@ -3,6 +3,6 @@ from rag import answer
 
 text, pages = answer(" ".join(sys.argv[1:]))
 print(text)
-print("\nBakılan sayfalar:")
+print("\nPages consulted:")
 for f, p in pages:
-    print(f"  - {f}, sayfa {p}")
+    print(f"  - {f}, page {p}")

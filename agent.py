@@ -102,7 +102,7 @@ def ask_agent(question, max_steps=8):
 
 if __name__ == "__main__":
     result, calls = ask_agent(" ".join(sys.argv[1:]))
-    print("Araç çağrıları:")
+    print("Tool calls:")
     for name, args in calls:
         print(f"  {name}({json.dumps(args, ensure_ascii=False)})")
     print()

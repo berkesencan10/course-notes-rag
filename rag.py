@@ -6,8 +6,8 @@ import chromadb
 
 MODEL = "claude-sonnet-5-5"
 NEIGHBORS = int(os.environ.get("RAG_NEIGHBORS", "1"))  # neighbouring pages added on each side
-N_CANDIDATES = 30  # aramadan kaç aday çekilsin
-N_PICKED = 6       # benzerleri eledikten sonra kaç sayfa kalsın
+N_CANDIDATES = 30  # candidates fetched from the vector search
+N_PICKED = 6       # pages kept after removing near-duplicates
 
 _pages = json.load(open("data/pages.json", encoding="utf-8"))
 _page_text = {(p["file"], p["page"]): p["text"] for p in _pages}
@@ -23,7 +23,7 @@ def _words(text):
 def answer(question):
     res = _col.query(query_texts=[question], n_results=N_CANDIDATES)
 
-    # birbirine çok benzeyen sayfaları (animasyon kareleri) teke indir
+    # collapse near-identical pages (slide animation frames) into one
     picked, picked_words = [], []
     for doc, meta in zip(res["documents"][0], res["metadatas"][0]):
         w = _words(doc)

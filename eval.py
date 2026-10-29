@@ -45,10 +45,10 @@ for i, item in enumerate(questions, start=1):
             else:
                 ok = (not refused(text)) and has_all(text, item["must"])
         except Exception as e:
-            text, ok = f"HATA: {e}", False
+            text, ok = f"ERROR: {e}", False
         passes += ok
         if not ok or not shown_text:
-            shown_text = text  # başarısız bir cevap varsa onu sakla
+            shown_text = text  # keep a failed answer if there is one
     total += passes
     print(f'{i:2d}. {passes}/{RUNS}  {item["q"]}')
     results.append({"q": item["q"], "passes": passes, "runs": RUNS,
@@ -58,10 +58,10 @@ for i, item in enumerate(questions, start=1):
 json.dump(results, open(f"eval_results_{MODE}.json", "w", encoding="utf-8"),
           ensure_ascii=False, indent=2)
 n = len(questions) * RUNS
-print(f"\nSkor: {total}/{n} ({100 * total / n:.0f}%)")
+print(f"\nScore: {total}/{n} ({100 * total / n:.0f}%)")
 if STATS:
-    print(f"Ortalama araç çağrısı: {sum(c for c, _ in STATS) / len(STATS):.1f}")
-    print(f"Silinen doğrulanmamış kaynak: {sum(r for _, r in STATS)}")
+    print(f"Average tool calls: {sum(c for c, _ in STATS) / len(STATS):.1f}")
+    print(f"Unverified sources removed: {sum(r for _, r in STATS)}")
 
 from rag import USAGE
 print(f"Tokens per question: input {USAGE['in'] / n:.0f}, output {USAGE['out'] / n:.0f}")

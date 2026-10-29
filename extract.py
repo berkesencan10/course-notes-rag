@@ -12,9 +12,9 @@ for pdf_path in sorted(Path("data/notes").glob("*.pdf")):
             empty += 1
             continue
         pages.append({"file": pdf_path.name, "page": i, "text": text})
-    print(f"{pdf_path.name}: {len(doc)} sayfa, {empty} boş/resim sayfası")
+    print(f"{pdf_path.name}: {len(doc)} pages, {empty} empty/image-only pages")
 
 Path("data").mkdir(exist_ok=True)
 with open("data/pages.json", "w", encoding="utf-8") as f:
     json.dump(pages, f, ensure_ascii=False)
-print(f"\nToplam: {len(pages)} sayfa kaydedildi")
+print(f"\nTotal: {len(pages)} pages saved")

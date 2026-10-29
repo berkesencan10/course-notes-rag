@@ -23,4 +23,4 @@ for i in range(0, len(ids), 500):
     col.add(ids=ids[i:i + 500], documents=docs[i:i + 500], metadatas=metas[i:i + 500])
     print(f"{min(i + 500, len(ids))}/{len(ids)}")
 
-print(len(ids), "parça kaydedildi")
+print(len(ids), "chunks indexed")
