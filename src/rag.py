@@ -1,9 +1,9 @@
 """Classic RAG: vector search, near-duplicate removal, neighbouring pages, one Claude call."""
 import json
 import os
-import re
 import anthropic
 import chromadb
+from src.helpers import dedupe_pages, expand_neighbours
 
 MODEL = "claude-sonnet-5-5"
 NEIGHBORS = int(os.environ.get("RAG_NEIGHBORS", "2"))  # neighbouring pages added on each side
@@ -17,31 +17,16 @@ _client = anthropic.Anthropic()
 USAGE = {"in": 0, "out": 0}
 
 
-def _words(text):
-    return set(re.findall(r"\w+", text.lower()))
+def _ranked(res):
+    return [(m["file"], m["page"], d) for d, m in zip(res["documents"][0], res["metadatas"][0])]
 
 
 def answer(question):
     res = _col.query(query_texts=[question], n_results=N_CANDIDATES)
 
     # collapse near-identical pages (slide animation frames) into one
-    picked, picked_words = [], []
-    for doc, meta in zip(res["documents"][0], res["metadatas"][0]):
-        w = _words(doc)
-        if any(len(w & o) / max(len(w | o), 1) > 0.7 for o in picked_words):
-            continue
-        picked.append((meta["file"], meta["page"]))
-        picked_words.append(w)
-        if len(picked) == N_PICKED:
-            break
-
-    wanted = set()
-    for file, page in picked:
-        for k in range(-NEIGHBORS, NEIGHBORS + 1):
-            key = (file, page + k)
-            if key in _page_text:
-                wanted.add(key)
-    wanted = sorted(wanted)
+    picked = dedupe_pages(_ranked(res), N_PICKED)
+    wanted = expand_neighbours(picked, _page_text, NEIGHBORS)
 
     context = ""
     for file, page in wanted:
@@ -68,15 +53,7 @@ Question: {question}"""
 
 def search(query, n=6):
     res = _col.query(query_texts=[query], n_results=N_CANDIDATES)
-    picked, picked_words = [], []
-    for doc, meta in zip(res["documents"][0], res["metadatas"][0]):
-        w = _words(doc)
-        if any(len(w & o) / max(len(w | o), 1) > 0.7 for o in picked_words):
-            continue
-        picked.append((meta["file"], meta["page"]))
-        picked_words.append(w)
-        if len(picked) == n:
-            break
+    picked = dedupe_pages(_ranked(res), n)
     return [(f, p, _page_text[(f, p)]) for f, p in picked]
 
 

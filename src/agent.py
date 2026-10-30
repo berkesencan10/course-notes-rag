@@ -3,6 +3,7 @@ import sys
 import json
 import anthropic
 from src.rag import search, get_page, MODEL, USAGE
+from src.helpers import validate_sources
 
 SYSTEM = """You answer questions about university course notes (lecture slides).
 Use search_notes to find relevant pages. Slide titles often appear alone, so use get_page
@@ -89,11 +90,7 @@ def ask_agent(question, max_steps=8):
         results = []
         for tu in tool_uses:
             if tu.name == "submit_answer":
-                out = dict(tu.input)
-                kept = [s for s in out.get("sources", []) if (s["file"], s["page"]) in _seen]
-                out["unverified_sources_removed"] = len(out.get("sources", [])) - len(kept)
-                out["sources"] = kept
-                return out, calls
+                return validate_sources(tu.input, _seen), calls
             calls.append((tu.name, tu.input))
             results.append({"type": "tool_result", "tool_use_id": tu.id,
                             "content": run_tool(tu.name, tu.input)})

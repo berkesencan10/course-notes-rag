@@ -2,7 +2,7 @@
 
 Ask questions about your lecture PDFs and get answers that cite the **file and page** they came from. If the notes do not cover the question, the system says so instead of guessing. Built for students who want to study from their own slides and check every answer against the source.
 
-A small end-to-end LLM project: PDF extraction, retrieval with a local vector store, answer generation with the Claude API, a tool-calling agent with structured JSON output, and an evaluation harness. Built with AI assistance (Claude); each design decision below was tested with the eval harness.
+A small end-to-end LLM project: PDF extraction, retrieval with a local vector store, answer generation with the Claude API, a tool-calling agent with structured JSON output, and an evaluation harness. Built with AI assistance (Claude). Most design decisions were checked with the eval harness, and the pure logic is covered by offline unit tests.
 
 ## Example output
 
@@ -68,15 +68,20 @@ CLASSIC RAG  (src/rag.py)                 AGENT  (src/agent.py)
 Project layout:
 
 ```
-src/       pipeline code: extract, index, search, rag, ask, agent
-eval/      eval.py and eval_questions.json
-scripts/   check_api.py (checks that your API key works)
+src/            pipeline code: extract, index, search, rag, ask, agent, helpers
+                (helpers.py holds the pure functions that the tests cover)
+tests/          offline pytest unit tests (no API calls, no course PDFs)
+eval/           eval.py and eval_questions.json
+scripts/        check_api.py (checks that your API key works)
+data/           created by you: data/notes/ (your PDFs), data/pages.json (git-ignored)
+requirements.txt  pinned dependencies
+LICENSE         MIT
 ```
 
 ## How it works
 
 1. `src/extract.py` reads every PDF page with PyMuPDF and keeps the file name and page number.
-2. `src/index.py` stores one chunk per page (split at 1500 characters) in a local Chroma database. Embeddings use Chroma's default local model, so no extra API key is needed.
+2. `src/index.py` stores one chunk per page in a local Chroma database (a page longer than 1500 characters is split into several chunks; most slide pages are shorter, so they stay as one chunk). Embeddings use Chroma's default local model, so no extra API key is needed.
 3. Two ways to answer a question:
    - **Classic RAG** (`src/rag.py`, `src/ask.py`): vector search, remove near-duplicate pages, add neighbouring pages, then one Claude call with a prompt that says "answer only from the excerpts and cite them".
    - **Agent** (`src/agent.py`): Claude decides what to do with three tools: `search_notes`, `get_page` and `submit_answer`. The final answer is structured JSON (`answer`, `sources`, `confidence`). Cited pages that the agent never saw (neither in a search result nor via `get_page`) are removed in code; this never triggered in my tests.
@@ -86,14 +91,24 @@ scripts/   check_api.py (checks that your API key works)
 
 | | Classic RAG | Agent |
 |---|---|---|
-| Score (23 questions, one run) | 23/23 | 23/23 |
+| Score (23 questions, 1 run each) | 23/23 | 23/23 |
 | Input tokens per question | 2379 | 3753 |
 | Output tokens per question | 303 | 433 |
 | Tool calls per question | none | 2.1 |
 
 On this test set the two are equally accurate. The agent uses about 1.5x the tokens: the input ratio is 1.58 and the output ratio is 1.43, so on the same model it costs roughly 1.4x to 1.6x, whatever the per-token prices are.
 
-My take (a judgment, not something this test measured): classic RAG is the better default. It is one call, cheaper and easier to debug, but its recall depends on retrieval settings (with 1 neighbouring page it scored 44/46, with 2 it scored 46/46). The agent is worth its cost when you need structured output or source validation downstream, or when an answer is spread over several places, because it decides what to read. It also has more moving parts: a bad tool call can change the answer.
+My take (a judgment, not something this test measured): classic RAG is the better default. It is one call, cheaper and easier to debug, but its recall depends on retrieval settings (in a separate comparison of 2 runs of 23 questions = 46 checks, 1 neighbouring page scored 44/46 and 2 scored 46/46). The agent is worth its cost when you need structured output or source validation downstream, or when an answer is spread over several places, because it decides what to read. It also has more moving parts: a bad tool call can change the answer.
+
+## Testing
+
+Unit tests cover the logic that does not need the Claude API: splitting text into chunks, near-duplicate removal, removal of unverified sources, neighbour-page expansion and PDF text extraction (the test generates a tiny PDF itself, so no course files are needed). They run offline in about a second:
+
+```
+pytest
+```
+
+These tests check the code around the model. Answer quality is measured separately by the eval harness below, which calls the API.
 
 ## Evaluation
 
@@ -114,7 +129,7 @@ My take (a judgment, not something this test measured): classic RAG is the bette
 ## What I learned
 
 - **Slide animation frames flood the search.** One slide deck contains 21 near-identical "Alpha-beta pruning" frames that filled the top results and pushed out the page with the actual algorithm. Removing near-duplicate pages fixed it.
-- **Title-only slides.** A slide with only a title is not an answer. Adding neighbouring pages (or letting the agent call `get_page`) fixed several "not found" answers. With 1 neighbouring page the classic version scored 44/46 (96%) because one fact sat two pages away; with 2 it scored 46/46 over two runs.
+- **Title-only slides.** A slide with only a title is not an answer. Adding neighbouring pages (or letting the agent call `get_page`) fixed several "not found" answers. In that comparison (2 runs of the 23 questions = 46 checks) the classic version with 1 neighbouring page scored 44/46 (96%) because one fact sat two pages away; with 2 neighbouring pages (the default, `RAG_NEIGHBORS`) it scored 46/46.
 - **One eval run is not a score.** The same question passed in one run and failed in the next because the model words answers differently. Repeating each question and averaging is more honest.
 - **Check the test, not just the system.** The first baseline was 17/18, but the failure was a keyword check that was too strict (the answer was correct). Two such checks were loosened after reading the answers.
 
@@ -153,6 +168,8 @@ python -m src.agent "Is depth-first search complete?"   # tool-calling agent
 
 python -m eval.eval 3                         # classic, each question 3 times
 python -m eval.eval 3 agent                   # agent
+
+pytest                                        # unit tests, offline
 ```
 
 The course PDFs are not included in this repository. `eval/eval_questions.json` was written for an Artificial Intelligence course; replace it with questions for your own notes.
